@@ -12,8 +12,6 @@ the only files required on the storage of the pico are the .bin payloads, everyt
 
 you can still modify the html by uploading your own index.html, if there is no index.html on the storage the internal pages will be used.<br>
 
-if you have problems compiling the sketch make sure the <a href=https://github.com/stooged/ESP32-Server-900u#libraries>ESP32 library</a> is up to date.<br>
-
 you can access the main page from the userguide or the consoles webbrowser using any hostname.<br>
 
 
