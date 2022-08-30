@@ -38,6 +38,7 @@ Adafruit_USBD_MSC msc;
 Adafruit_USBD_Device dev;
 #define FILESYS LittleFS 
 boolean hasEnabled = false;
+boolean hasStarted = false;
 int ftemp = 70;
 long enTime = 0;
 File upFile;
@@ -650,7 +651,6 @@ void writeConfig()
 #endif
 
 
-
 int32_t msc_read_callback (uint32_t lba, void* buffer, uint32_t bufsize)
 {
   if (lba > 4){lba = 4;}
@@ -659,15 +659,8 @@ int32_t msc_read_callback (uint32_t lba, void* buffer, uint32_t bufsize)
 }
 
 
-void setup() {
-
-  msc.setID("PS4", "PICO Server", "1.0");
-  msc.setCapacity(8192, 512);
-  msc.setReadWriteCallback(msc_read_callback, 0, 0);
-  msc.setUnitReady(true);
-  msc.begin();
-  dev.detach();
-
+void startFileSystem()
+{
   if (FILESYS.begin()) {
 #if USECONFIG     
   if (FILESYS.exists("/config.ini")) {
@@ -772,7 +765,20 @@ void setup() {
   }
 #endif
   }
+  hasStarted = true;
+}
 
+
+void setup() {
+
+  msc.setID("PS4", "PICO Server", "1.0");
+  msc.setCapacity(8192, 512);
+  msc.setReadWriteCallback(msc_read_callback, 0, 0);
+  msc.setUnitReady(true);
+  msc.begin();
+  dev.detach();
+  
+  startFileSystem();
 
   webServer.onNotFound(handleNotFound);
   webServer.on("/upload.html", HTTP_POST, []() {
@@ -812,6 +818,11 @@ void loop() {
 
 void setup1()
 {
+   while (!hasStarted)
+   {
+     delay(1000);
+   }
+   
   if (startAP)
   {
     WiFi.softAPConfig(Server_IP, Server_IP, Subnet_Mask);
