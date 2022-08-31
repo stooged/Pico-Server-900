@@ -39,6 +39,13 @@ Tom's Hardware presented a very nice writeup on installing arduino-pico on both 
 ## Uploading to board
 
 installation is simple you just use the arduino ide to flash the sketch/firmware to the pico board.<br>
+
+or <br>
+
+you can download the <a href=https://github.com/stooged/Pico-Server-900/releases>Pico_Server_900.uf2</a> file then connect your pico to your pc and drop the file into the storage drive the pico creates, the board will update and reboot.<br>
+
+
+
  
 <br>
 next you connect to the wifi access point with a pc/laptop, <b>PS4_WEB_AP</b> is the default SSID and <b>password</b> is the default password.<br>
