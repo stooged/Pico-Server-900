@@ -51,23 +51,22 @@ String firmwareVer = "1.00";
 #define USECONFIG true // this will allow you to change these settings below via the admin webpage.
                        // if you want to permanently use the values below then set this to false.
 
-//create access point
-boolean startAP = true;
+// access point
 String AP_SSID = "PS4_WEB_AP";
 String AP_PASS = "password";
 IPAddress Server_IP(10,1,1,1);
 IPAddress Subnet_Mask(255,255,255,0);
 
-//connect to wifi
-boolean connectWifi = false;
-String WIFI_SSID = "Home_WIFI";
+// wifi
+boolean connectWifi = false;   // enabling this option will disable the access point
+String WIFI_SSID = "Home_WIFI"; 
 String WIFI_PASS = "password";
 String WIFI_HOSTNAME = "ps4.local";
 
 //server port
 int WEB_PORT = 80;
 
-//Auto Usb Wait(milliseconds)
+//exfathax Wait(milliseconds)
 int USB_WAIT = 10000;
 
 //-----------------------------------------------------//
@@ -496,14 +495,22 @@ void handleConfig()
     String tmpwport = webServer.arg("web_port");
     String tmpsubn = webServer.arg("subnet");
     String WIFI_HOSTNAME = webServer.arg("wifi_host");
-    String tmpua = "false";
+
     String tmpcw = "false";
-    if (webServer.hasArg("useap")){tmpua = "true";}
-    if (webServer.hasArg("usewifi")){tmpcw = "true";}
+
+    if (webServer.hasArg("usewifi"))
+    {
+      String tmpcval = webServer.arg("usewifi");
+      if (tmpcval.equals("true"))
+      {
+        tmpcw = "true";
+      }
+    }
+
     int USB_WAIT = webServer.arg("usbwait").toInt();
     File iniFile = FILESYS.open("/config.ini", "w");
     if (iniFile) {
-    iniFile.print("\r\nAP_SSID=" + AP_SSID + "\r\nAP_PASS=" + AP_PASS + "\r\nWEBSERVER_IP=" + tmpip + "\r\nWEBSERVER_PORT=" + tmpwport + "\r\nSUBNET_MASK=" + tmpsubn + "\r\nWIFI_SSID=" + WIFI_SSID + "\r\nWIFI_PASS=" + WIFI_PASS + "\r\nWIFI_HOST=" + WIFI_HOSTNAME + "\r\nUSEAP=" + tmpua + "\r\nCONWIFI=" + tmpcw + "\r\nUSBWAIT=" + String(USB_WAIT) + "\r\n");
+    iniFile.print("\r\nAP_SSID=" + AP_SSID + "\r\nAP_PASS=" + AP_PASS + "\r\nWEBSERVER_IP=" + tmpip + "\r\nWEBSERVER_PORT=" + tmpwport + "\r\nSUBNET_MASK=" + tmpsubn + "\r\nWIFI_SSID=" + WIFI_SSID + "\r\nWIFI_PASS=" + WIFI_PASS + "\r\nWIFI_HOST=" + WIFI_HOSTNAME + "\r\nCONWIFI=" + tmpcw + "\r\nUSBWAIT=" + String(USB_WAIT) + "\r\n");
     iniFile.close();
     }
     String htmStr = "<!DOCTYPE html><html><head><meta http-equiv=\"refresh\" content=\"8; url=/info.html\"><style type=\"text/css\">#loader {  z-index: 1;   width: 50px;   height: 50px;   margin: 0 0 0 0;   border: 6px solid #f3f3f3;   border-radius: 50%;   border-top: 6px solid #3498db;   width: 50px;   height: 50px;   -webkit-animation: spin 2s linear infinite;   animation: spin 2s linear infinite; } @-webkit-keyframes spin {  0%  {  -webkit-transform: rotate(0deg);  }  100% {  -webkit-transform: rotate(360deg); }}@keyframes spin {  0% { transform: rotate(0deg); }  100% { transform: rotate(360deg); }} body { background-color: #1451AE; color: #ffffff; font-size: 20px; font-weight: bold; margin: 0 0 0 0.0; padding: 0.4em 0.4em 0.4em 0.6em;}   #msgfmt { font-size: 16px; font-weight: normal;}#status { font-size: 16px;  font-weight: normal;}</style></head><center><br><br><br><br><br><p id=\"status\"><div id='loader'></div><br>Config saved<br>Rebooting</p></center></html>";
@@ -522,11 +529,17 @@ void handleConfig()
 
 void handleConfigHtml()
 {
-  String tmpUa = "";
   String tmpCw = "";
-  if (startAP){tmpUa = "checked";}
-  if (connectWifi){tmpCw = "checked";}
-  String htmStr = "<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Config Editor</title><style type=\"text/css\">body {    background-color: #1451AE; color: #ffffff; font-size: 14px;  font-weight: bold;    margin: 0 0 0 0.0;    padding: 0.4em 0.4em 0.4em 0.6em;}  input[type=\"submit\"]:hover {     background: #ffffff;    color: green; }input[type=\"submit\"]:active {     outline-color: green;    color: green;    background: #ffffff; }table {    font-family: arial, sans-serif;     border-collapse: collapse;}td {border: 1px solid #dddddd;     text-align: left;    padding: 8px;}  th {border: 1px solid #dddddd; background-color:gray;    text-align: center;    padding: 8px;}</style></head><body><form action=\"/config.html\" method=\"post\"><center><table><tr><th colspan=\"2\"><center>Access Point</center></th></tr><tr><td>AP SSID:</td><td><input name=\"ap_ssid\" value=\"" + AP_SSID + "\"></td></tr><tr><td>AP PASSWORD:</td><td><input name=\"ap_pass\" value=\"********\"></td></tr><tr><td>AP IP:</td><td><input name=\"web_ip\" value=\"" + Server_IP.toString() + "\"></td></tr><tr><td>SUBNET MASK:</td><td><input name=\"subnet\" value=\"" + Subnet_Mask.toString() + "\"></td></tr><tr><td>START AP:</td><td><input type=\"checkbox\" name=\"useap\" " + tmpUa +"></td></tr><tr><th colspan=\"2\"><center>Web Server</center></th></tr><tr><td>WEBSERVER PORT:</td><td><input name=\"web_port\" value=\"" + String(WEB_PORT) + "\"></td></tr><tr><th colspan=\"2\"><center>Wifi Connection</center></th></tr><tr><td>WIFI SSID:</td><td><input name=\"wifi_ssid\" value=\"" + WIFI_SSID + "\"></td></tr><tr><td>WIFI PASSWORD:</td><td><input name=\"wifi_pass\" value=\"********\"></td></tr><tr><td>WIFI HOSTNAME:</td><td><input name=\"wifi_host\" value=\"" + WIFI_HOSTNAME + "\"></td></tr><tr><td>CONNECT WIFI:</td><td><input type=\"checkbox\" name=\"usewifi\" " + tmpCw + "></tr><tr><th colspan=\"2\"><center>Auto USB Wait</center></th></tr><tr><td>WAIT TIME(ms):</td><td><input name=\"usbwait\" value=\"" + String(USB_WAIT) + "\"></td></tr></table><br><input id=\"savecfg\" type=\"submit\" value=\"Save Config\"></center></form></body></html>";
+  String tmpAp = "";
+  if (connectWifi)
+  {
+    tmpCw = "checked";
+  }
+  else
+  {
+    tmpAp = "checked";
+  }
+  String htmStr = "<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Config Editor</title><style type=\"text/css\">body {background-color: #1451AE; color: #ffffff; font-size: 14px;font-weight: bold; margin: 0 0 0 0.0; padding: 0.4em 0.4em 0.4em 0.6em;} input[type=\"submit\"]:hover {background: #ffffff;color: green;}input[type=\"submit\"]:active { outline-color: green; color: green; background: #ffffff; }table {font-family: arial, sans-serif;border-collapse: collapse;}td {border: 1px solid #dddddd;text-align: left;padding: 8px;}th {border: 1px solid #dddddd; background-color:gray;text-align: center;padding: 8px;} input[type=radio] {appearance: none;background-color: #fff;width: 15px;height: 15px;border: 2px solid #ccc;border-radius: 2px;display: inline-grid;place-content: center;}input[type=radio]::before {content: \"\";width: 10px;height: 10px;transform: scale(0);transform-origin: bottom left;background-color: #fff;clip-path: polygon(13% 50%, 34% 66%, 81% 2%, 100% 18%, 39% 100%, 0 71%);}input[type=radio]:checked::before {transform: scale(1);}input[type=radio]:checked{background-color:#00D651;border:2px solid #00D651;} </style></head><body><form action=\"/config.html\" method=\"post\"><center><table><tr><th colspan=\"2\"><center>Access Point</center></th></tr><tr><td>AP SSID:</td><td><input name=\"ap_ssid\" value=\"" + AP_SSID + "\"></td></tr><tr><td>AP PASSWORD:</td><td><input name=\"ap_pass\" value=\"********\"></td></tr><tr><td>AP IP:</td><td><input name=\"web_ip\" value=\"" + Server_IP.toString() + "\"></td></tr><tr><td>SUBNET MASK:</td><td><input name=\"subnet\" value=\"" + Subnet_Mask.toString() + "\"></td></tr><tr><td>USE AP:</td><td><input type=\"radio\" name=\"usewifi\" value=\"false\" " + tmpAp +"></td></tr><tr><th colspan=\"2\"><center>Web Server</center></th></tr><tr><td>WEBSERVER PORT:</td><td><input name=\"web_port\" value=\"" + String(WEB_PORT) + "\"></td></tr><tr><th colspan=\"2\"><center>Wifi Connection</center></th></tr><tr><td>WIFI SSID:</td><td><input name=\"wifi_ssid\" value=\"" + WIFI_SSID + "\"></td></tr><tr><td>WIFI PASSWORD:</td><td><input name=\"wifi_pass\" value=\"********\"></td></tr><tr><td>WIFI HOSTNAME:</td><td><input name=\"wifi_host\" value=\"" + WIFI_HOSTNAME + "\"></td></tr><tr><td>USE WIFI:</td><td><input type=\"radio\" name=\"usewifi\" value=\"true\" " + tmpCw + "></tr><tr><th colspan=\"2\"><center>Auto USB Wait</center></th></tr><tr><td>WAIT TIME(ms):</td><td><input name=\"usbwait\" value=\"" + String(USB_WAIT) + "\"></td></tr></table><br><input id=\"savecfg\" type=\"submit\" value=\"Save Config\"></center></form></body></html>";
   webServer.setContentLength(htmStr.length());
   webServer.send(200, "text/html", htmStr);
 }
@@ -640,11 +653,9 @@ void writeConfig()
 {
   File iniFile = FILESYS.open("/config.ini", "w");
   if (iniFile) {
-  String tmpua = "false";
   String tmpcw = "false";
-  if (startAP){tmpua = "true";}
   if (connectWifi){tmpcw = "true";}
-  iniFile.print("\r\nAP_SSID=" + AP_SSID + "\r\nAP_PASS=" + AP_PASS + "\r\nWEBSERVER_IP=" + Server_IP.toString() + "\r\nWEBSERVER_PORT=" + String(WEB_PORT) + "\r\nSUBNET_MASK=" + Subnet_Mask.toString() + "\r\nWIFI_SSID=" + WIFI_SSID + "\r\nWIFI_PASS=" + WIFI_PASS + "\r\nWIFI_HOST=" + WIFI_HOSTNAME + "\r\nUSEAP=" + tmpua + "\r\nCONWIFI=" + tmpcw + "\r\nUSBWAIT=" + String(USB_WAIT) + "\r\n");
+  iniFile.print("\r\nAP_SSID=" + AP_SSID + "\r\nAP_PASS=" + AP_PASS + "\r\nWEBSERVER_IP=" + Server_IP.toString() + "\r\nWEBSERVER_PORT=" + String(WEB_PORT) + "\r\nSUBNET_MASK=" + Subnet_Mask.toString() + "\r\nWIFI_SSID=" + WIFI_SSID + "\r\nWIFI_PASS=" + WIFI_PASS + "\r\nWIFI_HOST=" + WIFI_HOSTNAME + "\r\nCONWIFI=" + tmpcw + "\r\nUSBWAIT=" + String(USB_WAIT) + "\r\n");
   iniFile.close();
   }
 }
@@ -724,20 +735,6 @@ void startFileSystem()
    WIFI_HOSTNAME.trim();
    }
    
-   if(instr(iniData,"USEAP="))
-   {
-    String strua = split(iniData,"USEAP=","\r\n");
-    strua.trim();
-    if (strua.equals("true"))
-    {
-      startAP = true;
-    }
-    else
-    {
-      startAP = false;
-    }
-   }
-
    if(instr(iniData,"CONWIFI="))
    {
     String strcw = split(iniData,"CONWIFI=","\r\n");
@@ -766,6 +763,37 @@ void startFileSystem()
 #endif
   }
   hasStarted = true;
+}
+
+
+void loadAP()
+{
+   WiFi.softAPConfig(Server_IP, Server_IP, Subnet_Mask);
+   WiFi.softAP(AP_SSID, AP_PASS);
+   dnsServer.setTTL(30);
+   dnsServer.setErrorReplyCode(DNSReplyCode::ServerFailure);
+   dnsServer.start(53, "*", Server_IP);
+}
+
+
+void loadSTA()
+{
+   WiFi.setHostname(WIFI_HOSTNAME.c_str());
+   WiFi.begin(WIFI_SSID.c_str(), WIFI_PASS.c_str());
+   if (WiFi.waitForConnectResult() != WL_CONNECTED) {
+      loadAP();
+   } else {
+      IPAddress LAN_IP = WiFi.localIP(); 
+      if (LAN_IP)
+      {
+         String mdnsHost = WIFI_HOSTNAME;
+         mdnsHost.replace(".local","");
+         MDNS.begin(mdnsHost, LAN_IP);
+         dnsServer.setTTL(30);
+         dnsServer.setErrorReplyCode(DNSReplyCode::ServerFailure);
+         dnsServer.start(53, "*", LAN_IP);
+      }
+   }
 }
 
 
@@ -805,6 +833,7 @@ void setup() {
   webServer.begin(WEB_PORT);
 }
 
+
 void loop() {
   if (hasEnabled && millis() >= (enTime + 15000))
   {
@@ -816,41 +845,18 @@ void loop() {
 }
 
 
-void setup1()
-{
-   while (!hasStarted)
-   {
-     delay(1000);
-   }
-   
-  if (startAP)
+void setup1() {
+  while (!hasStarted)
   {
-    WiFi.softAPConfig(Server_IP, Server_IP, Subnet_Mask);
-    WiFi.softAP(AP_SSID, AP_PASS);
-    dnsServer.setTTL(30);
-    dnsServer.setErrorReplyCode(DNSReplyCode::ServerFailure);
-    dnsServer.start(53, "*", Server_IP);
+    delay(1000);
   }
-  
   if (connectWifi && WIFI_SSID.length() > 0 && WIFI_PASS.length() > 0)
   {
-    WiFi.begin(WIFI_SSID.c_str(), WIFI_PASS.c_str());
-    if (WiFi.waitForConnectResult() != WL_CONNECTED) {
-    } else {
-      IPAddress LAN_IP = WiFi.localIP(); 
-      if (LAN_IP)
-      {
-        String mdnsHost = WIFI_HOSTNAME;
-        mdnsHost.replace(".local","");
-        MDNS.begin(mdnsHost, LAN_IP);
-        if (!startAP)
-        {
-          dnsServer.setTTL(30);
-          dnsServer.setErrorReplyCode(DNSReplyCode::ServerFailure);
-          dnsServer.start(53, "*", LAN_IP);
-        }
-      }
-    }
+    loadSTA();
+  }
+  else
+  {
+    loadAP();
   }
 }
 
