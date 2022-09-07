@@ -19,7 +19,7 @@
 
                     // enable fan threshold [ true / false ]
 #define FANMOD true // this will include a function to set the consoles fan ramp up temperature in °C
-                    // this will not work if usb control is disabled.
+                    // this setting will persist through reboot but will be lost on power out.
 
 
 #if FANMOD
@@ -164,13 +164,6 @@ void enableUSB()
 }
 
 
-void sendwebmsg(String htmMsg)
-{
-    String tmphtm = "<!DOCTYPE html><html><head><style>body { background-color: #1451AE;color: #ffffff;font-size: 14px; font-weight: bold; margin: 0 0 0 0.0; padding: 0.4em 0.4em 0.4em 0.6em;}</style></head><center><br><br><br><br><br><br>" + htmMsg + "</center></html>";
-    webServer.setContentLength(tmphtm.length());
-    webServer.send(200, "text/html", tmphtm);
-}
-
 String getContentType(String filename){
   if(filename.endsWith(".htm")) return "text/html";
   else if(filename.endsWith(".html")) return "text/html";
@@ -192,7 +185,6 @@ String getContentType(String filename){
 
 bool loadFromFileSys(String path) {
  path = webServer.urlDecode(path);
- //Serial.println(path);
  if (path.equals("/connecttest.txt"))
  {
   webServer.setContentLength(22);
@@ -305,7 +297,7 @@ bool loadFromFileSys(String path) {
     }
   }
   if (webServer.streamFile(dataFile, dataType) != dataFile.size()) {
-    //Serial.println("Sent less data than expected!");
+    //Sent less data than expected!;
   }
   dataFile.close();
   return true;
@@ -328,7 +320,6 @@ void handleNotFound() {
     message += " NAME:" + webServer.argName(i) + "\n VALUE:" + webServer.arg(i) + "\n";
   }
   webServer.send(404, "text/plain", "Not Found");
-  //Serial.print(message);
 }
 
 void handleFileUpload() {
@@ -361,7 +352,6 @@ void handleFileUpload() {
 
 void handleFormat()
 {
-  //Serial.print("Formatting Filesystem");
   FILESYS.end();
   FILESYS.format();
   FILESYS.begin();
@@ -391,7 +381,7 @@ void handleDelete(){
 
 void handleFileMan() {
   Dir dir = FILESYS.openDir("/");
-  String output = "<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>File Manager</title><style type=\"text/css\">a:link {color: #ffffff; text-decoration: none;} a:visited {color: #ffffff; text-decoration: none;} a:hover {color: #ffffff; text-decoration: underline;} a:active {color: #ffffff; text-decoration: underline;} table {font-family: arial, sans-serif; border-collapse: collapse; width: 100%;} td, th {border: 1px solid #dddddd; text-align: left; padding: 8px;} button {display: inline-block; padding: 1px; margin-right: 6px; vertical-align: top; float:left;} body {background-color: #1451AE;color: #ffffff; font-size: 14px; padding: 0.4em 0.4em 0.4em 0.6em; margin: 0 0 0 0.0;}</style><script>function statusDel(fname) {var answer = confirm(\"Are you sure you want to delete \" + fname + \" ?\");if (answer) {return true;} else { return false; }}</script></head><body><br><table id=filetable></table><script>var filelist = ["; 
+  String output = "<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>File Manager</title><link rel=\"stylesheet\" href=\"style.css\"><style>body{overflow-y:auto;} th{border: 1px solid #dddddd; background-color:gray;padding: 8px;}</style><script>function statusDel(fname) {var answer = confirm(\"Are you sure you want to delete \" + fname + \" ?\");if (answer) {return true;} else { return false; }}</script></head><body><br><table id=filetable></table><script>var filelist = ["; 
   int fileCount = 0;
   while(dir.next()){
     File entry = dir.openFile("r");
@@ -421,7 +411,8 @@ void handleFileMan() {
 
 void handlePayloads() {
   Dir dir = FILESYS.openDir("/");
-  String output = "<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Pico Server</title><script>function setpayload(payload,title,waittime){ sessionStorage.setItem('payload', payload); sessionStorage.setItem('title', title); sessionStorage.setItem('waittime', waittime);  window.open('loader.html', '_self');}</script><style>.btn {transition-duration: 0.4s; box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19); background-color: DodgerBlue; border: none; color: white; padding: 12px 16px; font-size: 16px; cursor: pointer; font-weight: bold;} .btn:hover { background-color: RoyalBlue;} .slct{transition-duration: 0.4s;box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);text-align: center;-webkit-appearance: none;background-color: DodgerBlue;border: none;color: white;padding: 9px 1px;font-size: 16px;cursor: pointer;font-weight: bold;}.slct:hover {background-color: RoyalBlue;} body { background-color: #1451AE; color: #ffffff; font-size: 14px; font-weight: bold; margin: 0 0 0 0.0; overflow-y:hidden; text-shadow: 3px 2px DodgerBlue;} .main { padding: 0px 0px; position: absolute; top: 0; right: 0; bottom: 0; left: 0; overflow-y:hidden;} msg {color: #ffffff; font-weight: normal; text-shadow: none;} a {color: #ffffff; font-weight: bold;}</style></head><body><center><h1>9.00 Payloads</h1>";
+  String output = "<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Pico Server</title><link rel=\"stylesheet\" href=\"style.css\"><style>body { background-color: #1451AE; color: #ffffff; font-size: 14px; font-weight: bold; margin: 0 0 0 0.0; overflow-y:hidden; text-shadow: 3px 2px DodgerBlue;}</style><script>function setpayload(payload,title,waittime){ sessionStorage.setItem('payload', payload); sessionStorage.setItem('title', title); sessionStorage.setItem('waittime', waittime);  window.open('loader.html', '_self');}</script></head><body><center><h1>9.00 Payloads</h1>";
+  
   int cntr = 0;
   int payloadCount = 0;
   if (USB_WAIT < 5000){USB_WAIT = 5000;} // correct unrealistic timing values
@@ -468,7 +459,7 @@ void handlePayloads() {
 
   if (payloadCount == 0)
   {
-      output += "<msg>No .bin payloads found<br>You need to upload the payloads to the Pico board using a pc/laptop connect to <b>" + AP_SSID + "</b> and navigate to <a href=http://" + Server_IP.toString() + "/admin.html>http://" + Server_IP.toString() + "/admin.html</a> and upload the .bin payloads using the <b>File Uploader</b></msg></center></body></html>";
+      output += "<msg>No payloads found<br>You need to upload the payloads to the Pico board using a pc/laptop connect to <b>" + AP_SSID + "</b> and navigate to <a href=http://" + WIFI_HOSTNAME + "/admin.html>http://" + WIFI_HOSTNAME + "/admin.html</a> and upload the payloads using the <b>File Uploader</b></msg></center></body></html>";
   }
   output += "</center></body></html>";
   webServer.setContentLength(output.length());
@@ -625,7 +616,7 @@ void handleInfo()
 {
   FSInfo fs_info;
   FILESYS.info(fs_info);
-  String output = "<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>System Information</title><style type=\"text/css\">body { background-color: #1451AE;color: #ffffff;font-size: 14px;font-weight: bold; margin: 0 0 0 0.0; padding: 0.4em 0.4em 0.4em 0.6em;}</style></head>";
+  String output = "<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>System Information</title><link rel=\"stylesheet\" href=\"style.css\"></head>";
   output += "<hr>###### Software ######<br><br>";
   output += "Firmware version " + firmwareVer + "<br><hr>";
   output += "###### MCU ######<br><br>";
