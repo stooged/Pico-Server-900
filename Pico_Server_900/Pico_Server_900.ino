@@ -1,11 +1,23 @@
 #include <WiFi.h>
 #include <DNSServer.h>
 #include <WebServer.h>
-#include <LittleFS.h>
 #include <LEAmDNS.h>
 #include "Adafruit_TinyUSB.h"
 #include "exfathax.h"
 #include "Loader.h"
+
+
+// use SD Card [ true / false ]
+#define USESD false  // a FAT32 formatted SD Card will be used instead of the onboard flash for the storage. \
+                     // this requires a board with a sd card slot or a sd card connected.
+
+                     //until there is a fix released using a SD card requires you to edit the file located at
+                     //C:\Users\**PCUSERNAME**\AppData\Local\Arduino15\packages\rp2040\hardware\rp2040\X.X.X\libraries\SDFS\src\SDFS.h
+                     
+                     //line 279 needs to be changed to:   return _opened ? _fd->availableForWrite() : 0;
+          
+
+                     
 
 // enable internal goldhen.h [ true / false ]
 #define INTHEN true  // goldhen is placed in the app partition to free up space on the storage for other payloads. \
@@ -31,12 +43,24 @@
 #include "goldhen.h"
 #endif
 
+#if USESD
+#include <SPI.h>
+#include <SD.h>
+#define SCK 18   // pins for sd card
+#define MISO 16  // these values are set for the Pico-W
+#define MOSI 19  
+#define CS 17
+#define FILESYS SD
+#else
+#include <LittleFS.h>
+#define FILESYS LittleFS
+#endif
+
 
 DNSServer dnsServer;
 WebServer webServer;
 Adafruit_USBD_MSC msc;
 Adafruit_USBD_Device dev;
-#define FILESYS LittleFS
 boolean hasEnabled = false;
 boolean hasStarted = false;
 int ftemp = 70;
@@ -327,11 +351,13 @@ void handleFileUpload() {
 
 
 void handleFormat() {
+#if !USESD  
   FILESYS.end();
   FILESYS.format();
   FILESYS.begin();
 #if USECONFIG
   writeConfig();
+#endif
 #endif
   webServer.sendHeader("Location", "/fileman.html");
   webServer.send(302, "text/html", "");
@@ -354,36 +380,41 @@ void handleDelete() {
 
 
 void handleFileMan() {
-  Dir dir = FILESYS.openDir("/");
+  File dir = FILESYS.open("/", "r");
   String output = "<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>File Manager</title><link rel=\"stylesheet\" href=\"style.css\"><style>body{overflow-y:auto;} th{border: 1px solid #dddddd; background-color:gray;padding: 8px;}</style><script>function statusDel(fname) {var answer = confirm(\"Are you sure you want to delete \" + fname + \" ?\");if (answer) {return true;} else { return false; }}</script></head><body><br><table id=filetable></table><script>var filelist = [";
   int fileCount = 0;
-  while (dir.next()) {
-    File entry = dir.openFile("r");
-    String fname = String(entry.name());
-    if (fname.startsWith("/")) { fname = fname.substring(1); }
-    if (fname.length() > 0 && !fname.equals("config.ini")) {
+  while (dir) {
+    File file = dir.openNextFile();
+    if (!file) {
+      dir.close();
+      break;
+    }
+    String fname = String(file.name());
+    if (fname.length() > 0 && !fname.equals("config.ini") && !file.isDirectory()) {
       fileCount++;
       fname.replace("|", "%7C");
       fname.replace("\"", "%22");
-      output += "\"" + fname + "|" + formatBytes(entry.size()) + "\",";
+      output += "\"" + fname + "|" + formatBytes(file.size()) + "\",";
     }
-    entry.close();
+    file.close();
   }
   if (fileCount == 0) {
     output += "];</script><center>No files found<br>You can upload files using the <a href=\"/upload.html\" target=\"mframe\"><u>File Uploader</u></a> page.</center></p></body></html>";
   } else {
-    output += "];var output = \"\";filelist.forEach(function(entry) {var splF = entry.split(\"|\"); output += \"<tr>\";output += \"<td><a href=\\\"\" +  splF[0] + \"\\\">\" + splF[0] + \"</a></td>\"; output += \"<td>\" + splF[1] + \"</td>\";output += \"<td><a href=\\\"/\" + splF[0] + \"\\\" download><button type=\\\"submit\\\">Download</button></a></td>\";output += \"<td><form action=\\\"/delete\\\" method=\\\"post\\\"><button type=\\\"submit\\\" name=\\\"file\\\" value=\\\"\" + splF[0] + \"\\\" onClick=\\\"return statusDel('\" + splF[0] + \"');\\\">Delete</button></form></td>\";output += \"</tr>\";}); document.getElementById(\"filetable\").innerHTML = output;</script></body></html>";
+#if USESD     
+    output += "];var output = \"\";filelist.forEach(function(entry) {var splF = entry.split(\"|\"); output += \"<tr>\";output += \"<td><a href=\\\"\" +  splF[0] + \"\\\">\" + splF[0] + \"</a></td>\"; output += \"<td>\" + splF[1] + \"</td>\";output += \"<td><a href=\\\"/\" + splF[0] + \"\\\" download><button type=\\\"submit\\\">Download</button></a></td>\";output += \"<td><form action=\\\"/delete\\\" method=\\\"post\\\"><button type=\\\"submit\\\" name=\\\"file\\\" value=\\\"\" + splF[0] + \"\\\" onClick=\\\"return statusDel('\" + splF[0] + \"');\\\">Delete</button></form></td>\";output += \"</tr>\";}); document.getElementById(\"filetable\").innerHTML = \"<tr><th colspan='1'><center>File Name</center></th><th colspan='1'><center>File Size</center></th><th colspan='1'></th><th colspan='1'></th></tr>\" + output;</script></body></html>";
+#else  
+    output += "];var output = \"\";filelist.forEach(function(entry) {var splF = entry.split(\"|\"); output += \"<tr>\";output += \"<td><a href=\\\"\" +  splF[0] + \"\\\">\" + splF[0] + \"</a></td>\"; output += \"<td>\" + splF[1] + \"</td>\";output += \"<td><a href=\\\"/\" + splF[0] + \"\\\" download><button type=\\\"submit\\\">Download</button></a></td>\";output += \"<td><form action=\\\"/delete\\\" method=\\\"post\\\"><button type=\\\"submit\\\" name=\\\"file\\\" value=\\\"\" + splF[0] + \"\\\" onClick=\\\"return statusDel('\" + splF[0] + \"');\\\">Delete</button></form></td>\";output += \"</tr>\";}); document.getElementById(\"filetable\").innerHTML = \"<tr><th colspan='1'><center>File Name</center></th><th colspan='1'><center>File Size</center></th><th colspan='1'></th><th colspan='1'><center><a href='/format.html' target='mframe'><button type='submit'>Delete All</button></a></center></th></tr>\" + output;</script></body></html>";
+#endif  
   }
   webServer.setContentLength(output.length());
   webServer.send(200, "text/html", output);
 }
 
 
-
 void handlePayloads() {
-  Dir dir = FILESYS.openDir("/");
-  String output = "<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Pico Server</title><link rel=\"stylesheet\" href=\"style.css\"><style>body { background-color: #1451AE; color: #ffffff; font-size: 14px; font-weight: bold; margin: 0 0 0 0.0; overflow-y:hidden; text-shadow: 3px 2px DodgerBlue;}</style><script>function setpayload(payload,title,waittime){ sessionStorage.setItem('payload', payload); sessionStorage.setItem('title', title); sessionStorage.setItem('waittime', waittime);  window.open('loader.html', '_self');}</script></head><body><center><h1>9.00 Payloads</h1>";
-
+  File dir = FILESYS.open("/", "r");
+  String output = "<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>ESP Server</title><link rel=\"stylesheet\" href=\"style.css\"><style>body { background-color: #1451AE; color: #ffffff; font-size: 14px; font-weight: bold; margin: 0 0 0 0.0; overflow-y:hidden; text-shadow: 3px 2px DodgerBlue;}</style><script>function setpayload(payload,title,waittime){ sessionStorage.setItem('payload', payload); sessionStorage.setItem('title', title); sessionStorage.setItem('waittime', waittime);  window.open('loader.html', '_self');}</script></head><body><center><h1>9.00 Payloads</h1>";
   int cntr = 0;
   int payloadCount = 0;
   if (USB_WAIT < 5000) { USB_WAIT = 5000; }  // correct unrealistic timing values
@@ -395,38 +426,37 @@ void handlePayloads() {
   output += "<a onclick=\"setpayload('goldhen.bin','" + String(INTHEN_NAME) + "','" + String(USB_WAIT) + "')\"><button class=\"btn\">" + String(INTHEN_NAME) + "</button></a>&nbsp;";
 #endif
 
-  while (dir.next()) {
-    File entry = dir.openFile("r");
-    String fname = String(entry.name());
-    if (fname.startsWith("/")) { fname = fname.substring(1); }
-    if (fname.length() > 0) {
-      if (fname.endsWith(".gz")) {
-        fname = fname.substring(0, fname.length() - 3);
-      }
-      if (fname.endsWith(".bin")) {
-        payloadCount++;
-        String fnamev = fname;
-
-        fnamev.replace(".bin", "");
-        output += "<a onclick=\"setpayload('" + urlencode(fname) + "','" + fnamev + "','" + String(USB_WAIT) + "')\"><button class=\"btn\">" + fnamev + "</button></a>&nbsp;";
-        cntr++;
-        if (cntr == 3) {
-          cntr = 0;
-          output += "<p></p>";
-        }
+  while (dir) {
+    File file = dir.openNextFile();
+    if (!file) {
+      dir.close();
+      break;
+    }
+    String fname = String(file.name());
+    if (fname.endsWith(".gz")) {
+      fname = fname.substring(0, fname.length() - 3);
+    }
+    if (fname.length() > 0 && fname.endsWith(".bin") && !file.isDirectory()) {
+      payloadCount++;
+      String fnamev = fname;
+      fnamev.replace(".bin", "");
+      output += "<a onclick=\"setpayload('" + urlencode(fname) + "','" + fnamev + "','" + String(USB_WAIT) + "')\"><button class=\"btn\">" + fnamev + "</button></a>&nbsp;";
+      cntr++;
+      if (cntr == 4) {
+        cntr = 0;
+        output += "<p></p>";
       }
     }
-    entry.close();
+    file.close();
   }
-
 
 #if FANMOD
   payloadCount++;
-  output += "<br><p><a onclick='setfantemp()'><button class='btn'>Set Fan Threshold</button></a><select id='temp' class='slct'></select></p><script>function setfantemp(){var e = document.getElementById('temp');var temp = e.value;var xhr = new XMLHttpRequest();xhr.open('POST', 'setftemp?temp=' + temp, true);xhr.onload = function(e) {if (this.status == 200) {sessionStorage.setItem('payload', 'fant.bin'); sessionStorage.setItem('title', 'Fan Temp ' + temp + ' &deg;C'); localStorage.setItem('temp', temp); sessionStorage.setItem('waittime', '10000');  window.open('loader.html', '_self');}};xhr.send();}var stmp = localStorage.getItem('temp');if (!stmp){stmp = 70;}for(var i=55; i<=85; i=i+5){var s = document.getElementById('temp');var o = document.createElement('option');s.options.add(o);o.text = i + String.fromCharCode(32,176,67);o.value = i;if (i == stmp){o.selected = true;}}</script>";
+  output += "<br><p><a onclick='setfantemp()'><button class='btn'>Set Fan Threshold</button></a><select id='temp' class='slct'></select></p><script>function setfantemp(){var e = document.getElementById('temp');var temp = e.value;var xhr = new XMLHttpRequest();xhr.open('POST', 'setftemp', true);xhr.onload = function(e) {if (this.status == 200) {sessionStorage.setItem('payload', 'fant.bin'); sessionStorage.setItem('title', 'Fan Temp ' + temp + ' &deg;C'); localStorage.setItem('temp', temp); sessionStorage.setItem('waittime', '10000');  window.open('loader.html', '_self');}};xhr.send('temp=' + temp);}var stmp = localStorage.getItem('temp');if (!stmp){stmp = 70;}for(var i=55; i<=85; i=i+5){var s = document.getElementById('temp');var o = document.createElement('option');s.options.add(o);o.text = i + String.fromCharCode(32,176,67);o.value = i;if (i == stmp){o.selected = true;}}</script>";
 #endif
 
   if (payloadCount == 0) {
-    output += "<msg>No payloads found<br>You need to upload the payloads to the Pico board using a pc/laptop connect to <b>" + AP_SSID + "</b> and navigate to <a href=http://" + WIFI_HOSTNAME + "/admin.html>http://" + WIFI_HOSTNAME + "/admin.html</a> and upload the payloads using the <b>File Uploader</b></msg></center></body></html>";
+    output += "<msg>No .bin payloads found<br>You need to upload the payloads to the ESP32 board.<br>in the arduino ide select <b>Tools</b> &gt; <b>ESP32 Sketch Data Upload</b><br>or<br>Using a pc/laptop connect to <b>" + AP_SSID + "</b> and navigate to <a href=\"/admin.html\"><u>http://" + WIFI_HOSTNAME + "/admin.html</u></a> and upload the .bin payloads using the <b>File Uploader</b></msg></center></body></html>";
   }
   output += "</center></body></html>";
   webServer.setContentLength(output.length());
@@ -558,8 +588,6 @@ void handleRebootHtml() {
 
 
 void handleInfo() {
-  FSInfo fs_info;
-  FILESYS.info(fs_info);
   String output = "<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>System Information</title><link rel=\"stylesheet\" href=\"style.css\"></head>";
   output += "<hr>###### Software ######<br><br>";
   output += "Firmware version " + firmwareVer + "<br><hr>";
@@ -570,13 +598,20 @@ void handleInfo() {
   output += "Total Heap: " + formatBytes(rp2040.getTotalHeap()) + "<br>";
   output += "Used Heap: " + formatBytes(rp2040.getUsedHeap()) + "<br>";
   output += "Free Heap: " + formatBytes(rp2040.getFreeHeap()) + "<br><hr>";
-  output += "###### File system (LittleFS) ######<br><br>";
+  output += "###### Storage information ######<br><br>";
+#if USESD
+  output += "Storage Device: SD<br><hr>";
+#else
+  FSInfo fs_info;
+  FILESYS.info(fs_info);
+  output += "Filesystem: LittleFS<br>";
   output += "Total space: " + formatBytes(fs_info.totalBytes) + "<br>";
   output += "Used space: " + formatBytes(fs_info.usedBytes) + "<br>";
   output += "Block size: " + String(fs_info.blockSize) + "<br>";
   output += "Page size: " + String(fs_info.pageSize) + "<br>";
   output += "Maximum open files: " + String(fs_info.maxOpenFiles) + "<br>";
   output += "Maximum path length: " + String(fs_info.maxPathLength) + "<br><hr>";
+#endif
   output += "</html>";
   webServer.setContentLength(output.length());
   webServer.send(200, "text/html", output);
@@ -604,7 +639,11 @@ int32_t msc_read_callback(uint32_t lba, void* buffer, uint32_t bufsize) {
 
 
 void startFileSystem() {
+#if USESD
+  if (FILESYS.begin(CS)) {
+#else
   if (FILESYS.begin()) {
+#endif
 #if USECONFIG
     if (FILESYS.exists("/config.ini")) {
       File iniFile = FILESYS.open("/config.ini", "r");
