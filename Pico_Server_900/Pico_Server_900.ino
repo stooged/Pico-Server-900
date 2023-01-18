@@ -10,14 +10,7 @@
 // use SD Card [ true / false ]
 #define USESD false  // a FAT32 formatted SD Card will be used instead of the onboard flash for the storage. \
                      // this requires a board with a sd card slot or a sd card connected.
-
-                     //until there is a fix released using a SD card requires you to edit the file located at
-                     //C:\Users\**PCUSERNAME**\AppData\Local\Arduino15\packages\rp2040\hardware\rp2040\X.X.X\libraries\SDFS\src\SDFS.h
-                     
-                     //line 279 needs to be changed to:   return _opened ? _fd->availableForWrite() : 0;
-          
-
-                     
+            
 
 // enable internal goldhen.h [ true / false ]
 #define INTHEN true  // goldhen is placed in the app partition to free up space on the storage for other payloads. \
