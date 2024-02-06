@@ -4,29 +4,33 @@
 #include <LEAmDNS.h>
 #include "Adafruit_TinyUSB.h"
 #include "exfathax.h"
-#include "Loader.h"
+
+                     // use PsFree [ true / false ]
+#define PSFREE true  // use the newer psfree webkit exploit.
+                     // this is fairly stable but may fail which will require you to try and load the payload again.
 
 
-// use SD Card [ true / false ]
-#define USESD false  // a FAT32 formatted SD Card will be used instead of the onboard flash for the storage. \
+                     // use SD Card [ true / false ]
+#define USESD false  // a FAT32 formatted SD Card will be used instead of the onboard flash for the storage. 
                      // this requires a board with a sd card slot or a sd card connected.
             
 
-// enable internal goldhen.h [ true / false ]
-#define INTHEN true  // goldhen is placed in the app partition to free up space on the storage for other payloads. \
+                     // enable internal goldhen.h [ true / false ]
+#define INTHEN true  // goldhen is placed in the app partition to free up space on the storage for other payloads. 
                      // with this enabled you do not upload goldhen to the board, set this to false if you wish to upload goldhen.
 
 
-// enable autohen [ true / false ]
-#define AUTOHEN false  // this will load goldhen instead of the normal index/payload selection page, use this if you only want hen and no other payloads. \
+                       // enable autohen [ true / false ]
+#define AUTOHEN false  // this will load goldhen instead of the normal index/payload selection page, use this if you only want hen and no other payloads. 
                        // INTHEN must be set to true for this to work.
 
 
-// enable fan threshold [ true / false ]
-#define FANMOD true  // this will include a function to set the consoles fan ramp up temperature in °C \
+                     // enable fan threshold [ true / false ]
+#define FANMOD true  // this will include a function to set the consoles fan ramp up temperature in °C 
                      // this setting will persist through reboot but will be lost on power out.
 
 
+#include "Loader.h"
 #if FANMOD
 #include "fan.h"
 #endif
@@ -55,7 +59,6 @@ WebServer webServer;
 Adafruit_USBD_MSC msc;
 Adafruit_USBD_Device dev;
 boolean hasEnabled = false;
-boolean hasStarted = false;
 int ftemp = 70;
 long enTime = 0;
 File upFile;
@@ -64,8 +67,8 @@ String firmwareVer = "1.00";
 
 //-------------------DEFAULT SETTINGS------------------//
 
-// use config.ini [ true / false ]
-#define USECONFIG true  // this will allow you to change these settings below via the admin webpage. \
+                        // use config.ini [ true / false ]
+#define USECONFIG true  // this will allow you to change these settings below via the admin webpage. 
                         // if you want to permanently use the values below then set this to false.
 
 // access point
@@ -268,6 +271,13 @@ bool loadFromFileSys(String path) {
       webServer.send(200, "text/css", style_gz, sizeof(style_gz));
       return true;
     }
+#if PSFREE
+    if (path.endsWith("exploit.js")) {
+      webServer.sendHeader("Content-Encoding", "gzip");
+      webServer.send(200, "text/javascript", psf_gz, sizeof(psf_gz));
+      return true;
+    }
+#endif
 #if INTHEN
     if (path.endsWith("goldhen.bin")) {
       webServer.sendHeader("Content-Encoding", "gzip");
@@ -711,7 +721,6 @@ void startFileSystem() {
     }
 #endif
   }
-  hasStarted = true;
 }
 
 
@@ -744,16 +753,13 @@ void loadSTA() {
 
 
 void setup() {
-
   msc.setID("PS4", "PICO Server", "1.0");
   msc.setCapacity(8192, 512);
   msc.setReadWriteCallback(msc_read_callback, 0, 0);
   msc.setUnitReady(true);
   msc.begin();
   dev.detach();
-
   startFileSystem();
-
   webServer.onNotFound(handleNotFound);
   webServer.on(
     "/upload.html", HTTP_POST, []() {
@@ -793,14 +799,11 @@ void loop() {
 
 
 void setup1() {
-  while (!hasStarted) {
-    delay(1000);
-  }
-  if (connectWifi && WIFI_SSID.length() > 0 && WIFI_PASS.length() > 0) {
-    loadSTA();
-  } else {
-    loadAP();
-  }
+    if (connectWifi && WIFI_SSID.length() > 0 && WIFI_PASS.length() > 0) {
+        loadSTA();
+    } else {
+        loadAP();
+    }
 }
 
 

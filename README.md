@@ -4,7 +4,7 @@
 
 This is a project designed for the <a href=https://www.raspberrypi.com/products/raspberry-pi-pico/>Raspberry Pi Pico W</a> board to provide a wifi http server, dns server and USB storage emulation.
 
-it is for the <a href=https://github.com/ChendoChap/pOOBs4>PS4 9.00 OOB Exploit</a>.
+it is for the <a href=https://github.com/ChendoChap/pOOBs4>PS4 9.00 OOB Exploit</a> which is now combined with <a href=https://wololo.net/2023/12/04/psfree-webkit-exploit-for-ps4-6-00-to-9-60-and-ps5-1-00-to-5-50-quickhen-toolkit-announced/>PsFree</a>.
 
 <br>
 
